@@ -4,8 +4,9 @@
 import sys
 import time
 
-from waveshare_epd import epd5in83bc
+import requests
 from PIL import Image
+from waveshare_epd import epd5in83bc
 
 IMAGE_SIZE = (600, 448)
 
@@ -39,4 +40,13 @@ def show_image(image):
         epd.sleep()
 
 
-show_image(Image.open("test.png"))
+# Detect what we have and open it
+filename = sys.argv[1]
+if "://" in filename:
+    # URL
+    response = requests.get(filename)
+    image = Image.open(response.raw)
+else:
+    # Filename
+    image = Image.open(filename)
+show_image(image)
