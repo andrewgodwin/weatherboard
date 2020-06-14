@@ -33,7 +33,7 @@ def show_image(image):
     # Send to the display
     epd = epd5in83bc.EPD()
     epd.init()
-    epd.Clear()
+    # epd.Clear()
     try:
         epd.display(epd.getbuffer(black_image), epd.getbuffer(red_image))
         time.sleep(2)
