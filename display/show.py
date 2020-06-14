@@ -15,6 +15,7 @@ def show_image(image):
     """
     Renders an image to the display. Handles splitting colours.
     """
+    image = image.convert("RGB")
     # Create red & black images of the right size
     black_image = Image.new("1", IMAGE_SIZE, 1)
     red_image = Image.new("1", IMAGE_SIZE, 1)
@@ -44,7 +45,8 @@ def show_image(image):
 filename = sys.argv[1]
 if "://" in filename:
     # URL
-    response = requests.get(filename)
+    response = requests.get(filename, stream=True)
+    response.raw.decode_content = True
     image = Image.open(response.raw)
 else:
     # Filename

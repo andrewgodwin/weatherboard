@@ -41,8 +41,8 @@ def index():
     draw_text(draw, left, 75, now.strftime("%B"), BLACK, "bold", 30)
     # Draw on weather
     temp_current, temp_max, temp_min = 23, 31, -3
-    draw_text(draw, 480, 20, "°C", BLACK, "regular", 28, align="left")
-    draw_text(draw, 480, 10, temp_current, BLACK, "regular", 90, align="right")
+    draw_text(draw, 470, 20, "°C", BLACK, "regular", 28, align="left")
+    draw_text(draw, 470, 10, temp_current, BLACK, "regular", 90, align="right")
     draw_text(draw, 550, 15, temp_max, RED, "regular", 40, align="centre")
     draw_text(draw, 550, 60, temp_min, BLACK, "regular", 40, align="centre")
     # Send to client
