@@ -37,3 +37,6 @@ def show_image(image):
         time.sleep(2)
     finally:
         epd.sleep()
+
+
+show_image(Image.open("test.png"))
