@@ -3,6 +3,8 @@ FROM python:3.8-alpine
 # Copy and install requirements
 RUN apk update && apk add \
     gcc \
+    g++ \
+    freetype-dev \
     musl-dev \
     jpeg-dev \
     zlib-dev \
