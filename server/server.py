@@ -1,8 +1,10 @@
 import datetime
+import requests
+import pytz
 from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFont
-from flask import Flask, send_file
+from flask import Flask, send_file, request
 
 IMAGE_SIZE = (600, 448)
 BLACK = 0
@@ -13,7 +15,23 @@ fonts = {}
 
 @app.route("/")
 def index():
-    now = datetime.datetime.now()
+    # Get API key
+    api_key = request.args.get("api_key")
+    if not api_key:
+        return '{"error": "no_api_key"}'
+    # Get lat and long
+    lat = request.args.get("latitude", "39.75")
+    long = request.args.get("longitude", "-104.90")
+    timezone = request.args.get("timezone", "America/Denver")
+    # Fetch weather
+    weather_data = requests.get(
+        f"https://api.openweathermap.org/data/2.5/onecall?lat={lat}&lon={long}&exclude=minutely&units=metric&appid={api_key}"
+    ).json()
+    temp_current = round(float(weather_data["current"]["temp"]))
+    temp_min = round(float(weather_data["daily"][0]["temp"]["min"]))
+    temp_max = round(float(weather_data["daily"][0]["temp"]["max"]))
+    # Work out time
+    now = datetime.datetime.now(pytz.timezone(timezone))
     # Create image
     image = Image.new("P", IMAGE_SIZE, 2)
     image.putpalette([0, 0, 0, 200, 0, 0, 255, 255, 255] + (252 * [0, 0, 0]))
@@ -40,7 +58,6 @@ def index():
     left += th_size[0] + 6
     draw_text(draw, left, 75, now.strftime("%B"), BLACK, "bold", 30)
     # Draw on weather
-    temp_current, temp_max, temp_min = 23, 31, -3
     draw_text(draw, 470, 20, "°C", BLACK, "regular", 28, align="left")
     draw_text(draw, 470, 10, temp_current, BLACK, "regular", 90, align="right")
     draw_text(draw, 550, 15, temp_max, RED, "regular", 40, align="centre")

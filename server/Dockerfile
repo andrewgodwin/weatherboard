@@ -14,7 +14,7 @@ RUN apk update && apk add \
 # Codebase setup
 RUN mkdir /srv/weatherboard/
 WORKDIR /srv/weatherboard/
-RUN pip3 install pillow flask gunicorn
+RUN pip3 install requests pillow flask gunicorn pytz
 
 # Add code
 ENV PYTHONPATH /srv/weatherboard/server/
