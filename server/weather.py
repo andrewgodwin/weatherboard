@@ -53,8 +53,8 @@ class WeatherClient:
             "description": data["weather"][0]["main"].title(),
             "temperature": data["temp"],
             "wind": data["wind_speed"] * 2.2,
-            "rain": data.get("rain", {}).get("1h", 0),
-            "snow": data.get("snow", {}).get("1h", 0),
+            "rain": 2,  # data.get("rain", {}).get("1h", 0),
+            "snow": 4,  # data.get("snow", {}).get("1h", 0),
             "uv": data["uvi"],
         }
 

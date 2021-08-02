@@ -1,42 +1,28 @@
 import datetime
 import os
+from io import BytesIO
+from typing import Tuple
 
 import pytz
-from PIL import Image, ImageDraw, ImageFont
+import cairo
 
 from weather import WeatherClient
 
-IMAGE_SIZE = (600, 448)
-WHITE = 0
-BLACK = 1
-RED = 2
-GREEN = 3
-BLUE = 4
-YELLOW = 5
-ORANGE = 6
-PALETTE = [
-    255,
-    255,
-    255,
-    0,
-    0,
-    0,
-    200,
-    0,
-    0,
-    0,
-    200,
-    0,
-    0,
-    0,
-    200,
-    230,
-    230,
-    0,
-    200,
-    100,
-    0,
-]
+# BLACK = 0
+# WHITE = 1
+# GREEN = 2
+# BLUE = 3
+# RED = 4
+# YELLOW = 5
+# ORANGE = 6
+# PALETTE = [0,0,0,255,255,255,0,200,0,0,0,200,200,0,0,230,230,0,200,100,0]
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 140, 0)
 fonts = {}
 icons = {}
 
@@ -50,34 +36,71 @@ class ImageComposer7:
 
     def render(self):
         # Fetch weather
-        weather = WeatherClient(self.lat, self.long)
-        weather.load(self.api_key)
-        # Work out time
-        now = datetime.datetime.now(self.timezone)
+        self.weather = WeatherClient(self.lat, self.long)
+        self.weather.load(self.api_key)
         # Create image
-        self.image = Image.new("P", IMAGE_SIZE, 0)
-        self.image.putpalette(PALETTE)
-        # Draw on date
-        self.draw = ImageDraw.ImageDraw(self.image)
-        left = 15
-        top = 7
-        left += (
-            self.draw_text(
-                pos=(left, top),
-                text=now.strftime("%A"),
-                colour=BLACK,
-                font=("light", 55),
-            )[0]
-            + 15
+        with cairo.ImageSurface(cairo.FORMAT_ARGB32, 600, 448) as surface:
+            context = cairo.Context(surface)
+            context.rectangle(0, 0, 600, 448)
+            context.set_source_rgb(1, 1, 1)
+            context.fill()
+            # Draw features
+            self.draw_date(context)
+            self.draw_temps(context)
+            # Save out as bytestream
+            output = BytesIO()
+            surface.write_to_png(output)
+            return output
+
+    def draw_text(
+        self,
+        context: cairo.Context,
+        text: str,
+        position: Tuple[int, int],
+        size: int,
+        color=BLACK,
+        weight="regular",
+        align="left",
+    ):
+        text = str(text)
+        if weight == "light":
+            context.select_font_face("Roboto Light")
+        elif weight == "bold":
+            context.select_font_face(
+                "Roboto", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD
+            )
+        else:
+            context.select_font_face("Roboto")
+        context.set_source_rgb(*color)
+        context.set_font_size(size)
+        xbear, ybear, width, height = context.text_extents(text)[:4]
+        if align == "center":
+            context.move_to(position[0] - (width // 2) - xbear, position[1])
+        else:
+            context.move_to(*position)
+        context.show_text(text)
+        return width
+
+    def draw_date(self, context: cairo.Context):
+        now = datetime.datetime.now(self.timezone)
+        # Day name
+        left = 20
+        left += self.draw_text(
+            context,
+            text=now.strftime("%A"),
+            position=(20, 60),
+            size=50,
+            weight="light",
         )
-        top += 23
-        day_size = self.draw_text(
-            pos=(left, top),
+        # Day number
+        left += 10
+        left += self.draw_text(
+            context,
             text=now.strftime("%d").lstrip("0"),
-            colour=RED,
-            font=("regular", 28),
+            position=(left, 60),
+            size=30,
+            color=RED,
         )
-        left += day_size[0] + 2
         th = {
             "01": "st",
             "02": "nd",
@@ -87,46 +110,61 @@ class ImageComposer7:
             "23": "rd",
             "31": "st",
         }.get(now.strftime("%d"), "th")
-        th_size = self.draw_text(
-            pos=(left, top), text=th, colour=RED, font=("regular", 20)
+        left += 6
+        left += self.draw_text(
+            context,
+            text=th,
+            position=(left, 50),
+            size=20,
+            color=RED,
         )
-        left += th_size[0] + 6
-        self.draw_text(
-            pos=(left, top),
+        # Month name (short)
+        left += 7
+        left += self.draw_text(
+            context,
             text=now.strftime("%b"),
-            colour=BLACK,
-            font=("bold", 28),
+            position=(left, 60),
+            size=30,
+            color=RED,
         )
+
+    def draw_temps(self, context: cairo.Context):
         # Draw on temperature ranges
-        temp_min, temp_max = weather.temp_range_24hr()
-        self.draw.rectangle((390, 0, 460, 75), fill=BLUE)
-        self.draw.rectangle((460, 0, 530, 75), fill=BLACK)
-        self.draw.rectangle((530, 0, 600, 75), fill=RED)
+        temp_min, temp_max = self.weather.temp_range_24hr()
+        # Draw background rects
+        context.rectangle(390, 10, 70, 65)
+        context.set_source_rgb(*BLUE)
+        context.fill()
+        context.rectangle(530, 10, 70, 65)
+        context.set_source_rgb(*RED)
+        context.fill()
         self.draw_text(
-            pos=(425, 25),
+            context,
+            position=(425, 55),
             text=round(temp_min),
-            colour=WHITE,
-            font=("bold", 35),
-            align="centre",
+            color=WHITE,
+            weight="bold",
+            size=35,
+            align="center",
         )
         self.draw_text(
-            pos=(495, 25),
-            text=round(weather.temp_current()),
-            colour=WHITE,
-            font=("bold", 35),
-            align="centre",
+            context,
+            position=(495, 55),
+            text=round(self.weather.temp_current()),
+            color=BLACK,
+            weight="bold",
+            size=35,
+            align="center",
         )
         self.draw_text(
-            pos=(565, 25),
+            context,
+            position=(565, 55),
             text=round(temp_max),
-            colour=WHITE,
-            font=("bold", 35),
-            align="centre",
+            color=WHITE,
+            weight="bold",
+            size=35,
+            align="center",
         )
-        # Draw the meteogram
-        self.draw_meteogram(weather)
-        # Done!
-        return self.image
 
     def draw_meteogram(self, weather):
         last_temp_coords = None
@@ -135,7 +173,8 @@ class ImageComposer7:
         drawn_min = False
         drawn_max = False
         top = 120
-        temp_height = 80
+        temp_height = 100
+        precip_height = 100
         for hour in range(25):
             conditions = weather.hourly_summary(hour * 3600)
             x = 35 + (hour * 22)
@@ -145,7 +184,7 @@ class ImageComposer7:
                     conditions["time"].astimezone(self.timezone).strftime("%H").lower()
                 )
                 self.draw_text(
-                    pos=(x, top + 95),
+                    pos=(x, top + 120),
                     text=time_text,
                     colour=BLACK,
                     font=("regular", 20),
@@ -159,7 +198,7 @@ class ImageComposer7:
                 if conditions["uv"] >= 8:
                     color = RED
                 self.draw.rectangle(
-                    (last_temp_coords[0], top + 85, x, top + 90),
+                    (last_temp_coords[0], top + 110, x, top + 115),
                     fill=color,
                 )
             # Draw temperature bar
@@ -193,62 +232,22 @@ class ImageComposer7:
                     align="centre",
                 )
                 drawn_max = True
-
-    def draw_text(self, pos, text, colour, font, align="left"):
-        """
-        Draws text and returns its size
-        """
-        # Get font
-        if font not in fonts:
-            fonts[font] = ImageFont.truetype(
-                "Roboto-%s.ttf" % font[0].title(), size=font[1]
-            )
-        # Calculate size
-        size = self.draw.textsize(str(text), font=fonts[font])
-        # Draw
-        x, y = pos
-        if align == "right":
-            x -= size[0]
-        elif align.startswith("cent"):
-            x -= size[0] / 2
-        self.draw.text((x, y), str(text), fill=colour, font=fonts[font])
-        return size
-
-    def size_text(self, text, font):
-        """
-        Returns text size
-        """
-        # Get font
-        if font not in fonts:
-            fonts[font] = ImageFont.truetype(
-                "Roboto-%s.ttf" % font[0].title(), size=font[1]
-            )
-        # Calculate size
-        return self.draw.textsize(str(text), font=fonts[font])
-
-    def draw_icon(self, icon, pos, size):
-        """
-        Draws an icon file onto the image.
-        """
-        # Load icon
-        if icon not in icons:
-            raw_icon = Image.open(
-                os.path.join(os.path.dirname(__file__), "icons-2", icon + ".png")
-            ).convert("RGBA")
-            palette_icon = Image.new("P", raw_icon.size, 0)
-            for x in range(raw_icon.size[0]):
-                for y in range(raw_icon.size[1]):
-                    color = raw_icon.getpixel((x, y))
-                    new_color = BLACK
-                    if color[3] < 125:
-                        new_color = WHITE
-                    elif color[0] > 125:
-                        if color[1] < 125:
-                            new_color = RED
-                        else:
-                            new_color = WHITE
-                    palette_icon.putpixel((x, y), new_color)
-            icons[icon] = palette_icon
-        # Resize
-        icon_image = icons[icon].resize(size)
-        self.image.paste(icon_image, pos)
+            # Draw rain/snow bars
+            precip_top = top + 165
+            rain_height = min(precip_height, (conditions["rain"] / 8) * precip_height)
+            snow_height = min(precip_height, (conditions["snow"] / 8) * precip_height)
+            if rain_height:
+                self.draw.rectangle(
+                    (x - 3, precip_top, x + 3, precip_top + rain_height),
+                    fill=BLUE,
+                )
+            if snow_height:
+                self.draw.rectangle(
+                    (
+                        x - 3,
+                        precip_top + rain_height,
+                        x + 3,
+                        precip_top + rain_height + snow_height,
+                    ),
+                    fill=GREEN,
+                )

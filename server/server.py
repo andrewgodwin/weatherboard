@@ -22,6 +22,7 @@ def index():
             long=request.args.get("longitude", "-104.90"),
             timezone=request.args.get("timezone", "America/Denver"),
         )
+        output = composer.render()
     else:
         composer = ImageComposer2(
             api_key,
@@ -29,9 +30,9 @@ def index():
             long=request.args.get("longitude", "-104.90"),
             timezone=request.args.get("timezone", "America/Denver"),
         )
-    image = composer.render()
+        image = composer.render()
+        output = BytesIO()
+        image.save(output, "PNG")
     # Send to client
-    output = BytesIO()
-    image.save(output, "PNG")
     output.seek(0)
     return send_file(output, mimetype="image/png")
