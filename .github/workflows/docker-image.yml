@@ -26,7 +26,7 @@ jobs:
 
       # Calculate the image name
       - name: Calculate Docker image name
-        run: echo "::set-env name=IMAGE_TAG::`git rev-parse --short HEAD`"
+        run: echo "IMAGE_TAG=`git rev-parse --short HEAD`" >> $GITHUB_ENV
 
       # Build the Docker image
       - name: Build
