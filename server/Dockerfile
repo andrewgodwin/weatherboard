@@ -1,4 +1,4 @@
-FROM python:3.8-alpine
+FROM python:3.9-alpine
 
 # Copy and install requirements
 RUN apk update && apk add \
@@ -10,12 +10,12 @@ RUN apk update && apk add \
     zlib-dev \
     libjpeg \
     python3-dev \
-    py3-cairo
+    cairo-dev
 
 # Codebase setup
 RUN mkdir /srv/weatherboard/
 WORKDIR /srv/weatherboard/
-RUN pip3 install requests pillow flask gunicorn pytz
+RUN pip3 install requests pillow flask gunicorn pytz pycairo
 
 # Add code
 ENV PYTHONPATH /srv/weatherboard/server/
