@@ -10,7 +10,7 @@ RUN apk update && apk add \
     zlib-dev \
     libjpeg \
     python3-dev \
-    python3-cairo
+    py3-cairo
 
 # Codebase setup
 RUN mkdir /srv/weatherboard/
