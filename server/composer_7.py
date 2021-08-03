@@ -1,12 +1,14 @@
 import datetime
+import math
 import os
 from io import BytesIO
-from typing import Tuple
+from typing import List, Tuple
 
 import pytz
 import cairo
 
 from weather import WeatherClient
+from holidays import holidays
 
 # BLACK = 0
 # WHITE = 1
@@ -17,12 +19,14 @@ from weather import WeatherClient
 # ORANGE = 6
 # PALETTE = [0,0,0,255,255,255,0,200,0,0,0,200,200,0,0,230,230,0,200,100,0]
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-BLUE = (0, 0, 255)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-ORANGE = (255, 140, 0)
+WHITE = (1, 1, 1)
+GREEN = (0, 1, 0)
+BLUE = (0, 0, 1)
+RED = (1, 0, 0)
+YELLOW = (1, 1, 0)
+PURPLE = (0.5, 0, 1)
+ORANGE = (1, 0.55, 0)
+GREY = (0.4, 0.4, 0.4)
 fonts = {}
 icons = {}
 
@@ -36,7 +40,7 @@ class ImageComposer7:
 
     def render(self):
         # Fetch weather
-        self.weather = WeatherClient(self.lat, self.long)
+        self.weather = WeatherClient(self.lat, self.long, self.timezone)
         self.weather.load(self.api_key)
         # Create image
         with cairo.ImageSurface(cairo.FORMAT_ARGB32, 600, 448) as surface:
@@ -47,10 +51,327 @@ class ImageComposer7:
             # Draw features
             self.draw_date(context)
             self.draw_temps(context)
+            self.draw_meteogram(context)
+            self.draw_alerts(context)
+            self.draw_stats(context)
             # Save out as bytestream
             output = BytesIO()
             surface.write_to_png(output)
             return output
+
+    def draw_date(self, context: cairo.Context):
+        now = datetime.datetime.now(self.timezone)
+        # Day name
+        left = 5
+        left += self.draw_text(
+            context,
+            text=now.strftime("%A"),
+            position=(left, 55),
+            size=60,
+            weight="light",
+        )
+        # Day number
+        left += 10
+        left += self.draw_text(
+            context,
+            text=now.strftime("%d").lstrip("0"),
+            position=(left, 55),
+            size=30,
+            color=GREY,
+            weight="regular",
+        )
+        th = {
+            "01": "st",
+            "02": "nd",
+            "03": "rd",
+            "21": "st",
+            "22": "nd",
+            "23": "rd",
+            "31": "st",
+        }.get(now.strftime("%d"), "th")
+        left += 2
+        left += self.draw_text(
+            context,
+            text=th,
+            position=(left, 40),
+            size=15,
+            color=GREY,
+            weight="regular",
+        )
+        # Month name (short)
+        left += 5
+        left += self.draw_text(
+            context,
+            text=now.strftime("%b"),
+            position=(left, 55),
+            size=30,
+            color=GREY,
+            weight="regular",
+        )
+
+    def draw_temps(self, context: cairo.Context):
+        # Draw on temperature ranges
+        temp_min, temp_max = self.weather.temp_range_24hr()
+        c_to_f = lambda c: (c * (9 / 5)) + 32
+        # Draw background rects
+        self.draw_roundrect(context, 395, 5, 65, 65, 5)
+        context.set_source_rgb(*BLUE)
+        context.fill()
+        self.draw_roundrect(context, 530, 5, 65, 65, 5)
+        context.set_source_rgb(*RED)
+        context.fill()
+        self.draw_text(
+            context,
+            position=(428, 42),
+            text=round(temp_min),
+            color=WHITE,
+            weight="bold",
+            size=35,
+            align="center",
+        )
+        self.draw_text(
+            context,
+            position=(428, 62),
+            text=round(c_to_f(temp_min)),
+            color=WHITE,
+            weight="bold",
+            size=15,
+            align="center",
+        )
+        self.draw_text(
+            context,
+            position=(495, 42),
+            text=round(self.weather.temp_current()),
+            color=BLACK,
+            weight="bold",
+            size=35,
+            align="center",
+        )
+        self.draw_text(
+            context,
+            position=(495, 62),
+            text=round(c_to_f(self.weather.temp_current())),
+            color=BLACK,
+            weight="bold",
+            size=15,
+            align="center",
+        )
+        self.draw_text(
+            context,
+            position=(562, 42),
+            text=round(temp_max),
+            color=WHITE,
+            weight="bold",
+            size=35,
+            align="center",
+        )
+        self.draw_text(
+            context,
+            position=(562, 62),
+            text=round(c_to_f(temp_max)),
+            color=WHITE,
+            weight="bold",
+            size=15,
+            align="center",
+        )
+
+    def draw_meteogram(self, context: cairo.Context):
+        top = 90
+        left = 10
+        width = 582
+        height = 150
+        left_axis = 18
+        hours = 36
+        graph_width = width - left_axis
+        # Establish function that converts hour offset into X
+        hour_to_x = lambda hour: left + left_axis + (hour * (graph_width / hours))
+        # Draw day boundary lines
+        today = self.weather.hourly_summary(0)["day"]
+        for hour in range(hours):
+            day = self.weather.hourly_summary(hour * 3600)["day"]
+            if day != today:
+                context.save()
+                context.move_to(hour_to_x(hour) - 0.5, top)
+                context.line_to(hour_to_x(hour) - 0.5, top + height)
+                context.set_line_width(1)
+                context.set_source_rgb(*BLACK)
+                context.set_dash([1, 1])
+                context.stroke()
+                context.restore()
+                today = day
+        # Establish temperature-to-y function
+        temps = [
+            self.weather.hourly_summary(hour * 3600)["temperature"]
+            for hour in range(hours + 1)
+        ]
+        temp_min = min(temps)
+        temp_max = max(temps)
+        scale_min = math.floor(temp_min / 5) * 5
+        scale_max = math.ceil(temp_max / 5) * 5
+        temp_to_y = lambda temp: top + (scale_max - temp) * (
+            height // (scale_max - scale_min)
+        )
+        # Draw rain/snow curves
+        precip_to_y = lambda rain: top + 1 + (max(8 - rain, 0) * (height / 8))
+        rain_points = []
+        snow_points = []
+        for hour in range(hours + 1):
+            conditions = self.weather.hourly_summary(hour * 3600)
+            rain_points.append((hour_to_x(hour), precip_to_y(conditions["rain"])))
+            snow_points.append((hour_to_x(hour), precip_to_y(conditions["snow"])))
+        self.draw_precip_curve(
+            context, points=rain_points, bottom=precip_to_y(0), color=BLUE
+        )
+        self.draw_precip_curve(
+            context, points=snow_points, bottom=precip_to_y(0), color=PURPLE
+        )
+        # Draw value lines
+        for t in range(scale_min, scale_max + 1, 5):
+            y = temp_to_y(t)
+            context.move_to(left + left_axis, y + 0.5)
+            context.line_to(left + left_axis + graph_width, y + 0.5)
+            context.set_line_width(1)
+            context.set_source_rgb(*BLACK)
+            context.save()
+            context.set_dash([1, 1])
+            context.stroke()
+            context.restore()
+            self.draw_text(
+                context,
+                text=t,
+                position=(left + left_axis - 5, y),
+                size=12,
+                color=GREY,
+                align="right",
+                valign="middle",
+            )
+        # Draw temperature curve
+        for hour in range(hours + 1):
+            conditions = self.weather.hourly_summary(hour * 3600)
+            if hour == 0:
+                context.move_to(hour_to_x(hour), temp_to_y(conditions["temperature"]))
+            else:
+                context.line_to(hour_to_x(hour), temp_to_y(conditions["temperature"]))
+        context.set_source_rgb(*WHITE)
+        context.set_line_width(5)
+        context.stroke_preserve()
+        context.set_source_rgb(*RED)
+        context.set_line_width(2)
+        context.stroke()
+        # Draw hours and daylight/UV bar
+        bar_top = top + height + 13
+        for hour in range(hours + 1):
+            conditions = self.weather.hourly_summary(hour * 3600)
+            x = hour_to_x(hour)
+            # Hour label
+            if hour % 3 == 0 and hour < hours:
+                self.draw_text(
+                    context,
+                    text=conditions["hour"],
+                    position=(x, bar_top + 19),
+                    size=15,
+                    align="center",
+                    valign="bottom",
+                )
+            # Conditions bar
+            if hour < hours:
+                color = BLACK
+                if conditions["uv"]:
+                    if conditions["clouds"] > 45:
+                        color = GREY
+                    else:
+                        color = ORANGE
+                if conditions["uv"] > 7:
+                    color = RED
+                context.rectangle(x, bar_top, (graph_width / hours) + 1, 8)
+                context.set_source_rgb(*color)
+                context.fill()
+
+    def draw_alerts(self, context: cairo.Context):
+        # Load weather alerts
+        alerts = self.weather.active_alerts()
+        for alert in alerts:
+            alert["color"] = RED
+        # Add no alert pill if there weren't any
+        if not alerts:
+            alerts = [{"text": "No Alerts", "color": BLACK}]
+        # Add holidays
+        for holiday_date, holiday_name in holidays.items():
+            days_until = (holiday_date - datetime.date.today()).days
+            if days_until <= 14:
+                alerts.append(
+                    {
+                        "text": holiday_name,
+                        "subtext": (
+                            "in %i days" % days_until if days_until != 1 else "tomorrow"
+                        ),
+                        "color": BLUE,
+                    }
+                )
+        top = 305
+        left = 10
+        for alert in alerts:
+            text = alert["text"].upper()
+            text_width = self.draw_text(
+                context,
+                text,
+                position=(0, 0),
+                size=20,
+                weight="bold",
+                noop=True,
+            )
+            self.draw_roundrect(context, left, top, text_width + 20, 30, 4)
+            context.set_source_rgb(*alert["color"])
+            context.fill()
+            self.draw_text(
+                context,
+                text,
+                position=(left + 10, top + 23),
+                size=20,
+                color=WHITE,
+                weight="bold",
+            )
+            subtext_width = self.draw_text(
+                context,
+                alert["subtext"],
+                position=(left + text_width + 27, top + 26),
+                size=15,
+                color=BLACK,
+            )
+            top += 35
+
+    def draw_stats(self, context: cairo.Context):
+        # Draw sunrise, sunset, AQI icon and values
+        self.draw_icon(context, "rise-set-aqi", (450, 310))
+        self.draw_text(
+            context,
+            position=(500, 340),
+            text=self.weather.sunrise().astimezone(self.timezone).strftime("%H:%M"),
+            color=BLACK,
+            size=23,
+        )
+        self.draw_text(
+            context,
+            position=(500, 380),
+            text=self.weather.sunset().astimezone(self.timezone).strftime("%H:%M"),
+            color=BLACK,
+            size=23,
+        )
+        self.draw_text(
+            context,
+            position=(500, 418),
+            text=self.weather.aqi(),
+            color=BLACK,
+            size=23,
+        )
+
+    def draw_roundrect(self, context, x, y, width, height, r):
+        context.move_to(x, y + r)
+        context.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+        context.arc(x + width - r, y + r, r, 3 * math.pi / 2, 0)
+        context.arc(x + width - r, y + height - r, r, 0, math.pi / 2)
+        context.arc(x + r, y + height - r, r, math.pi / 2, math.pi)
+        context.close_path()
 
     def draw_text(
         self,
@@ -61,6 +382,8 @@ class ImageComposer7:
         color=BLACK,
         weight="regular",
         align="left",
+        valign="top",
+        noop=False,
     ):
         text = str(text)
         if weight == "light":
@@ -74,101 +397,65 @@ class ImageComposer7:
         context.set_source_rgb(*color)
         context.set_font_size(size)
         xbear, ybear, width, height = context.text_extents(text)[:4]
-        if align == "center":
-            context.move_to(position[0] - (width // 2) - xbear, position[1])
+        if align == "right":
+            x = position[0] - width - xbear
+        elif align == "center":
+            x = position[0] - (width / 2) - xbear
         else:
-            context.move_to(*position)
-        context.show_text(text)
+            x = position[0]
+        if valign == "middle":
+            y = position[1] + (height / 2)
+        elif valign == "bottom":
+            y = position[1] + height
+        else:
+            y = position[1]
+        if not noop:
+            context.move_to(x, y)
+            context.show_text(text)
         return width
 
-    def draw_date(self, context: cairo.Context):
-        now = datetime.datetime.now(self.timezone)
-        # Day name
-        left = 20
-        left += self.draw_text(
-            context,
-            text=now.strftime("%A"),
-            position=(20, 60),
-            size=50,
-            weight="light",
-        )
-        # Day number
-        left += 10
-        left += self.draw_text(
-            context,
-            text=now.strftime("%d").lstrip("0"),
-            position=(left, 60),
-            size=30,
-            color=RED,
-        )
-        th = {
-            "01": "st",
-            "02": "nd",
-            "03": "rd",
-            "21": "st",
-            "22": "nd",
-            "23": "rd",
-            "31": "st",
-        }.get(now.strftime("%d"), "th")
-        left += 6
-        left += self.draw_text(
-            context,
-            text=th,
-            position=(left, 50),
-            size=20,
-            color=RED,
-        )
-        # Month name (short)
-        left += 7
-        left += self.draw_text(
-            context,
-            text=now.strftime("%b"),
-            position=(left, 60),
-            size=30,
-            color=RED,
-        )
-
-    def draw_temps(self, context: cairo.Context):
-        # Draw on temperature ranges
-        temp_min, temp_max = self.weather.temp_range_24hr()
-        # Draw background rects
-        context.rectangle(390, 10, 70, 65)
-        context.set_source_rgb(*BLUE)
+    def draw_precip_curve(
+        self,
+        context: cairo.Context,
+        points: List[Tuple[int, int]],
+        bottom: int,
+        color,
+        curviness: float = 7,
+    ):
+        # Draw the top curves
+        for i, point in enumerate(points):
+            if i == 0:
+                context.move_to(*point)
+            else:
+                last_point = points[i - 1]
+                context.curve_to(
+                    last_point[0] + curviness,
+                    last_point[1],
+                    point[0] - curviness,
+                    point[1],
+                    point[0],
+                    point[1],
+                )
+        # Draw the rest and fill
+        context.line_to(points[-1][0], bottom)
+        context.line_to(points[0][0], bottom)
+        context.close_path()
+        context.set_source_rgb(*color)
         context.fill()
-        context.rectangle(530, 10, 70, 65)
-        context.set_source_rgb(*RED)
-        context.fill()
-        self.draw_text(
-            context,
-            position=(425, 55),
-            text=round(temp_min),
-            color=WHITE,
-            weight="bold",
-            size=35,
-            align="center",
-        )
-        self.draw_text(
-            context,
-            position=(495, 55),
-            text=round(self.weather.temp_current()),
-            color=BLACK,
-            weight="bold",
-            size=35,
-            align="center",
-        )
-        self.draw_text(
-            context,
-            position=(565, 55),
-            text=round(temp_max),
-            color=WHITE,
-            weight="bold",
-            size=35,
-            align="center",
-        )
 
-    def draw_meteogram(self, weather):
+    def draw_icon(self, context: cairo.Context, icon: str, position: Tuple[int, int]):
+        image = cairo.ImageSurface.create_from_png(
+            os.path.join(os.path.dirname(__file__), "icons-7", f"{icon}.png")
+        )
+        context.save()
+        context.translate(*position)
+        context.set_source_surface(image)
+        context.paint()
+        context.restore()
+
+    def old(self):
         last_temp_coords = None
-        temp_min, temp_max = weather.temp_range_24hr()
+        temp_min, temp_max = self.weather.temp_range_24hr()
         temp_range = temp_max - temp_min
         drawn_min = False
         drawn_max = False
@@ -176,7 +463,7 @@ class ImageComposer7:
         temp_height = 100
         precip_height = 100
         for hour in range(25):
-            conditions = weather.hourly_summary(hour * 3600)
+            conditions = self.weather.hourly_summary(hour * 3600)
             x = 35 + (hour * 22)
             # Draw the hour every other hour
             if hour % 2 == 0:
@@ -184,10 +471,11 @@ class ImageComposer7:
                     conditions["time"].astimezone(self.timezone).strftime("%H").lower()
                 )
                 self.draw_text(
-                    pos=(x, top + 120),
+                    context,
+                    position=(x, top + 120),
                     text=time_text,
                     colour=BLACK,
-                    font=("regular", 20),
+                    size=20,
                     align="centre",
                 )
             # Draw sunlight/UV bar
@@ -197,10 +485,10 @@ class ImageComposer7:
                     color = ORANGE
                 if conditions["uv"] >= 8:
                     color = RED
-                self.draw.rectangle(
-                    (last_temp_coords[0], top + 110, x, top + 115),
-                    fill=color,
-                )
+                # self.draw.rectangle(
+                #     (last_temp_coords[0], top + 110, x, top + 115),
+                #     fill=color,
+                # )
             # Draw temperature bar
             temp_y = top + (temp_max - conditions["temperature"]) * (
                 temp_height // temp_range

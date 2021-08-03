@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   viewBox="0 0 30 30"
+   style="enable-background:new 0 0 30 30;"
+   xml:space="preserve"
+   sodipodi:docname="clouds-scattered.svg"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
+   inkscape:export-filename="W:\home\andrew\Programs\weatherboard\server\icons\clouds-scattered.png"
+   inkscape:export-xdpi="320"
+   inkscape:export-ydpi="320"><metadata
+   id="metadata3939"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title></dc:title></cc:Work></rdf:RDF></metadata><defs
+   id="defs3937" /><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="640"
+   inkscape:window-height="480"
+   id="namedview3935"
+   showgrid="false"
+   inkscape:zoom="7.8666667"
+   inkscape:cx="-4.0677966"
+   inkscape:cy="15"
+   inkscape:current-layer="Layer_1" />
+<path
+   d="m 2.965897,17.23762 c 0,-1.331975 0.4169661,-2.513378 1.2508981,-3.555794 C 5.0507272,12.639411 6.1047247,11.967633 7.3903699,11.678073 7.749424,10.091286 8.5717737,8.794058 9.8342542,7.7748077 11.096735,6.7555574 12.556116,6.2459322 14.189233,6.2459322 c 1.59837,0 3.023003,0.4980428 4.273902,1.4825459 1.250898,0.9845031 2.061665,2.258566 2.432301,3.8106059 h 0.382219 c 1.042415,0 2.003754,0.254813 2.884015,0.752856 0.880262,0.498042 1.586788,1.192986 2.096413,2.073247 0.509625,0.880262 0.77602,1.830018 0.77602,2.872433 0,1.01925 -0.24323,1.969006 -0.729691,2.837686 -0.48646,0.868679 -1.158239,1.563622 -2.003753,2.08483 -0.845514,0.521207 -1.783688,0.799185 -2.791356,0.833932 H 8.5254441 C 6.9734039,22.924573 5.6645939,22.333872 4.5874316,21.221962 3.5102694,20.121635 2.965897,18.78966 2.965897,17.23762 Z m 1.9805887,0 c 0,1.007668 0.3474717,1.876347 1.0424151,2.61762 0.6949434,0.741273 1.5404578,1.135074 2.5365433,1.192986 H 21.486138 c 0.996086,-0.04633 1.8416,-0.451713 2.536544,-1.192986 0.706525,-0.741273 1.053997,-1.621534 1.053997,-2.61762 0,-1.01925 -0.382219,-1.887929 -1.135074,-2.629202 -0.752855,-0.741273 -1.644699,-1.11191 -2.687115,-1.11191 h -1.853182 c -0.127406,0 -0.196901,-0.06949 -0.196901,-0.208483 l -0.08108,-0.660196 C 18.995924,11.376931 18.451552,10.322933 17.501796,9.4774189 16.55204,8.6319045 15.451713,8.2033561 14.189233,8.2033561 c -1.262481,0 -2.37439,0.4285484 -3.300981,1.2740628 C 9.9500781,10.322933 9.4172881,11.376931 9.3014642,12.627829 l -0.092659,0.660196 c 0,0.138989 -0.081077,0.208483 -0.2316478,0.208483 H 8.3632907 C 7.3903699,13.612332 6.5796026,14.029298 5.9309888,14.735824 5.282375,15.44235 4.9464857,16.276282 4.9464857,17.23762 Z"
+   id="path3932"
+   inkscape:connector-curvature="0"
+   style="stroke-width:1.15823901" />
+</svg>

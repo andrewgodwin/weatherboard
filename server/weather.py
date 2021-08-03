@@ -1,19 +1,28 @@
 import time
 import pytz
+import math
+import random
 import requests
 from datetime import datetime
 
 
 class WeatherClient:
-    def __init__(self, latitude, longitude):
+    def __init__(self, latitude, longitude, timezone=None):
         self.latitude = float(latitude)
         self.longitude = float(longitude)
+        self.timezone = timezone
 
     def load(self, api_key):
         self.data = requests.get(
             f"https://api.openweathermap.org/data/2.5/onecall?lat={self.latitude}&lon={self.longitude}&exclude=minutely&units=metric&appid={api_key}"
         ).json()
+        self.pollution_data = requests.get(
+            f"https://api.openweathermap.org/data/2.5/air_pollution?lat={self.latitude}&lon={self.longitude}&exclude=minutely&units=metric&appid={api_key}"
+        ).json()
         self.current_time = self.data["current"]["dt"]
+
+    def aqi(self):
+        return self.pollution_data["list"][0]["main"]["aqi"]
 
     def temp_current(self):
         return self.data["current"]["temp"]
@@ -47,14 +56,21 @@ class WeatherClient:
                 break
         data = d1
         # Format a summary
+        dt = datetime.utcfromtimestamp(data["dt"]).replace(tzinfo=pytz.utc)
+        hour = dt.astimezone(self.timezone).strftime("%H").lstrip("0")
+        if hour == "":
+            hour = "0"
         return {
-            "time": datetime.utcfromtimestamp(data["dt"]).replace(tzinfo=pytz.utc),
+            "time": dt,
+            "hour": hour,
+            "day": dt.astimezone(self.timezone).strftime("%d").lstrip("0"),
             "icon": self.code_to_icon(data["weather"][0]["id"]),
             "description": data["weather"][0]["main"].title(),
             "temperature": data["temp"],
             "wind": data["wind_speed"] * 2.2,
-            "rain": 2,  # data.get("rain", {}).get("1h", 0),
-            "snow": 4,  # data.get("snow", {}).get("1h", 0),
+            "rain": data.get("rain", {}).get("1h", 0),
+            "snow": data.get("snow", {}).get("1h", 0),
+            "clouds": data["clouds"],
             "uv": data["uvi"],
         }
 
@@ -68,6 +84,22 @@ class WeatherClient:
             "temperature_range": (data["temp"]["min"], data["temp"]["max"]),
             "wind": data["wind_speed"] * 2.2,
         }
+
+    def active_alerts(self):
+        result = []
+        for alert in self.data["alerts"]:
+            hours_left = math.ceil((alert["end"] - time.time()) / 3600)
+            result.append(
+                {
+                    "text": alert["event"],
+                    "subtext": (
+                        "for %i hours" % hours_left
+                        if hours_left != 1
+                        else "for an hour"
+                    ),
+                }
+            )
+        return result
 
     def code_to_icon(self, code):
         if code == 511:

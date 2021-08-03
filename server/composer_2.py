@@ -218,7 +218,7 @@ class ImageComposer2:
         # Get font
         if font not in fonts:
             fonts[font] = ImageFont.truetype(
-                "Roboto-%s.ttf" % font[0].title(), size=font[1]
+                "fonts/Roboto-%s.ttf" % font[0].title(), size=font[1]
             )
         # Calculate size
         size = self.draw.textsize(str(text), font=fonts[font])
@@ -238,7 +238,7 @@ class ImageComposer2:
         # Get font
         if font not in fonts:
             fonts[font] = ImageFont.truetype(
-                "Roboto-%s.ttf" % font[0].title(), size=font[1]
+                "fonts/Roboto-%s.ttf" % font[0].title(), size=font[1]
             )
         # Calculate size
         return self.draw.textsize(str(text), font=fonts[font])
