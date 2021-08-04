@@ -87,7 +87,7 @@ class WeatherClient:
 
     def active_alerts(self):
         result = []
-        for alert in self.data["alerts"]:
+        for alert in self.data.get("alerts", []):
             hours_left = math.ceil((alert["end"] - time.time()) / 3600)
             result.append(
                 {
