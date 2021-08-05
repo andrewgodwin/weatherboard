@@ -64,7 +64,7 @@ class WeatherClient:
             "time": dt,
             "hour": hour,
             "day": dt.astimezone(self.timezone).strftime("%d").lstrip("0"),
-            "icon": self.code_to_icon(data["weather"][0]["id"]),
+            "icon": self.code_to_icon(data["weather"][0]["id"], data["uvi"] == 0),
             "description": data["weather"][0]["main"].title(),
             "temperature": data["temp"],
             "wind": data["wind_speed"] * 2.2,
@@ -101,9 +101,9 @@ class WeatherClient:
             )
         return result
 
-    def code_to_icon(self, code):
+    def code_to_icon(self, code, night=False):
         if code == 511:
-            return "snow"
+            return "sleet"
         elif code == 771:
             return "thunderstorm"
         elif 200 <= code < 300:
@@ -121,9 +121,9 @@ class WeatherClient:
         elif 700 <= code < 800:
             return "fog"
         elif code == 800:
-            return "clear-day"
+            return "clear-night" if night else "clear-day"
         elif code == 801:
-            return "clouds-few-day"
+            return "clouds-few-night" if night else "clouds-few-day"
         elif code == 802:
             return "clouds-scattered"
         else:
