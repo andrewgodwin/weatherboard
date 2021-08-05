@@ -240,9 +240,9 @@ class ImageComposer7:
             self.draw_text(
                 context,
                 text=t,
-                position=(left + left_axis - 5, y),
-                size=12,
-                color=GREY,
+                position=(left + left_axis - 6, y),
+                size=14,
+                color=BLACK,
                 align="right",
                 valign="middle",
             )
