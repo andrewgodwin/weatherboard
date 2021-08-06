@@ -213,7 +213,7 @@ class ImageComposer7:
             height / (scale_max - scale_min)
         )
         # Draw rain/snow curves
-        precip_to_y = lambda rain: top + 1 + (max(8 - rain, 0) * (height / 8))
+        precip_to_y = lambda rain: top + 1 + (max(4 - rain, 0) * (height / 4))
         rain_points = []
         snow_points = []
         for hour in range(hours + 1):

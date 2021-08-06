@@ -13,6 +13,7 @@ holidays = {
     datetime.date(2022, 5, 9): "Mothers' Day US",
     datetime.date(2022, 5, 30): "Memorial Day",
     datetime.date(2022, 6, 19): "Fathers' Day",
+    datetime.date(2022, 6, 20): "Juneteenth",
     datetime.date(2022, 7, 4): "Independence Day",
     datetime.date(2022, 9, 5): "Labor Day",
     datetime.date(2022, 10, 10): "Columbus Day",
