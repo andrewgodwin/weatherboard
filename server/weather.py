@@ -2,7 +2,6 @@ import time
 import pytz
 import math
 import requests
-import aqi
 from datetime import datetime
 
 
