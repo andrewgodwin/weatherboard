@@ -1,8 +1,8 @@
 import time
 import pytz
 import math
-import random
 import requests
+import aqi
 from datetime import datetime
 
 

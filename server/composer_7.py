@@ -378,12 +378,30 @@ class ImageComposer7:
             color=BLACK,
             size=32,
         )
+        # Pick AQI text and color
+        aqi = self.weather.aqi()
+        aqi = 5
+        if aqi == 1:
+            text = "GOOD"
+            color = GREEN
+        elif aqi == 2:
+            text = "OK"
+            color = YELLOW
+        elif aqi == 3:
+            text = "MODRT"
+            color = ORANGE
+        elif aqi == 4:
+            text = "BAD"
+            color = RED
+        else:
+            text = "DANGR"
+            color = RED
+        text_width = self.draw_text(context, text, size=25, weight="bold", noop=True)
+        self.draw_roundrect(context, 504, 402, text_width + 10, 36, 3)
+        context.set_source_rgb(*color)
+        context.fill()
         self.draw_text(
-            context,
-            position=(505, 429),
-            text=self.weather.aqi(),
-            color=BLACK,
-            size=32,
+            context, position=(508, 429), text=text, color=WHITE, size=25, weight="bold"
         )
 
     def draw_roundrect(self, context, x, y, width, height, r):
@@ -398,8 +416,8 @@ class ImageComposer7:
         self,
         context: cairo.Context,
         text: str,
-        position: Tuple[int, int],
         size: int,
+        position: Tuple[int, int] = (0, 0),
         color=BLACK,
         weight="regular",
         align="left",
