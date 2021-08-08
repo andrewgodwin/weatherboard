@@ -380,7 +380,6 @@ class ImageComposer7:
         )
         # Pick AQI text and color
         aqi = self.weather.aqi()
-        aqi = 5
         if aqi == 1:
             text = "GOOD"
             color = GREEN
