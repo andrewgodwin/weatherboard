@@ -4,6 +4,8 @@ import math
 import requests
 from datetime import datetime
 
+from requests.api import head
+
 
 class WeatherClient:
     def __init__(self, latitude, longitude, timezone=None):
@@ -21,7 +23,25 @@ class WeatherClient:
         self.current_time = self.data["current"]["dt"]
 
     def aqi(self):
-        return self.pollution_data["list"][0]["main"]["aqi"]
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36 Edg/92.0.902.67",
+        }
+        response = requests.post(
+            "https://airnowgovapi.com/reportingarea/get",
+            headers=headers,
+            data={
+                "latitude": "39.790",
+                "longitude": "-104.888",
+                "stateCode": "CO",
+                "maxDistance": "50",
+            },
+        )
+        pollutants = {}
+        for entry in response.json():
+            if "aqi" in entry:
+                pollutants[entry["parameter"]] = entry["aqi"]
+        aqi = max(pollutants.values())
+        return aqi
 
     def temp_current(self):
         return self.data["current"]["temp"]

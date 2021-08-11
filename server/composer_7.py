@@ -380,27 +380,18 @@ class ImageComposer7:
         )
         # Pick AQI text and color
         aqi = self.weather.aqi()
-        if aqi == 1:
-            text = "GOOD"
+        if aqi < 50:
             color = GREEN
-        elif aqi == 2:
-            text = "OK"
-            color = YELLOW
-        elif aqi == 3:
-            text = "MODRT"
+        elif aqi < 150:
             color = ORANGE
-        elif aqi == 4:
-            text = "BAD"
-            color = RED
         else:
-            text = "DANGR"
             color = RED
-        text_width = self.draw_text(context, text, size=25, weight="bold", noop=True)
-        self.draw_roundrect(context, 504, 402, text_width + 10, 36, 3)
+        text_width = self.draw_text(context, aqi, size=30, weight="bold", noop=True)
+        self.draw_roundrect(context, 505, 402, text_width + 13, 36, 3)
         context.set_source_rgb(*color)
         context.fill()
         self.draw_text(
-            context, position=(508, 429), text=text, color=WHITE, size=25, weight="bold"
+            context, position=(510, 430), text=aqi, color=WHITE, size=30, weight="bold"
         )
 
     def draw_roundrect(self, context, x, y, width, height, r):
