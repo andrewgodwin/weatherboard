@@ -310,13 +310,10 @@ class ImageComposer7:
         alerts = self.weather.active_alerts()
         for alert in alerts:
             alert["color"] = RED
-        # Add no alert pill if there weren't any
-        if not alerts:
-            alerts = [{"text": "No Alerts", "color": BLACK}]
         # Add holidays
         for holiday_date, holiday_name in holidays.items():
             days_until = (holiday_date - datetime.date.today()).days
-            if days_until <= 14:
+            if 0 <= days_until <= 14:
                 alerts.append(
                     {
                         "text": holiday_name,
@@ -326,6 +323,9 @@ class ImageComposer7:
                         "color": BLUE,
                     }
                 )
+        # Add no alert pill if there weren't any
+        if not alerts:
+            alerts = [{"text": "No Alerts", "color": BLACK}]
         top = 265
         left = 5
         for alert in alerts:
