@@ -2,7 +2,7 @@ import datetime
 import math
 import os
 from io import BytesIO
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import pytz
 import cairo
@@ -66,7 +66,7 @@ class ImageComposer7:
     def draw_date(self, context: cairo.Context):
         now = datetime.datetime.now(self.timezone)
         # Day name
-        left = 5
+        left: int = 5
         self.draw_text(
             context,
             text=now.strftime("%A"),
@@ -221,10 +221,10 @@ class ImageComposer7:
             rain_points.append((hour_to_x(hour), precip_to_y(conditions["rain"])))
             snow_points.append((hour_to_x(hour), precip_to_y(conditions["snow"])))
         self.draw_precip_curve(
-            context, points=rain_points, bottom=precip_to_y(0), color=BLUE
+            context, points=rain_points, bottom=int(precip_to_y(0)), color=BLUE
         )
         self.draw_precip_curve(
-            context, points=snow_points, bottom=precip_to_y(0), color=PURPLE
+            context, points=snow_points, bottom=int(precip_to_y(0)), color=PURPLE
         )
         # Draw value lines
         for t in range(scale_min, scale_max + 1, y_interval):
@@ -256,7 +256,10 @@ class ImageComposer7:
         context.set_source_rgb(*WHITE)
         context.set_line_width(6)
         context.stroke_preserve()
-        context.set_source_rgb(*RED)
+        lg3 = cairo.LinearGradient(0, temp_to_y(0), 0, temp_to_y(0) + 1)
+        lg3.add_color_stop_rgb(0, *RED)
+        lg3.add_color_stop_rgb(1, *BLUE)
+        context.set_source(lg3)
         context.set_line_width(3)
         context.stroke()
         # Draw hours and daylight/UV bar
@@ -405,7 +408,7 @@ class ImageComposer7:
     def draw_text(
         self,
         context: cairo.Context,
-        text: str,
+        text: Union[str, int],
         size: int,
         position: Tuple[int, int] = (0, 0),
         color=BLACK,
@@ -413,7 +416,7 @@ class ImageComposer7:
         align="left",
         valign="top",
         noop=False,
-    ):
+    ) -> int:
         text = str(text)
         if weight == "light":
             context.select_font_face("Roboto Light")
@@ -441,7 +444,7 @@ class ImageComposer7:
         if not noop:
             context.move_to(x, y)
             context.show_text(text)
-        return width
+        return int(width)
 
     def draw_precip_curve(
         self,
@@ -481,90 +484,3 @@ class ImageComposer7:
         context.set_source_surface(image)
         context.paint()
         context.restore()
-
-    def old(self):
-        last_temp_coords = None
-        temp_min, temp_max = self.weather.temp_range_24hr()
-        temp_range = temp_max - temp_min
-        drawn_min = False
-        drawn_max = False
-        top = 120
-        temp_height = 100
-        precip_height = 100
-        for hour in range(25):
-            conditions = self.weather.hourly_summary(hour * 3600)
-            x = 35 + (hour * 22)
-            # Draw the hour every other hour
-            if hour % 2 == 0:
-                time_text = (
-                    conditions["time"].astimezone(self.timezone).strftime("%H").lower()
-                )
-                self.draw_text(
-                    context,
-                    position=(x, top + 120),
-                    text=time_text,
-                    colour=BLACK,
-                    size=20,
-                    align="centre",
-                )
-            # Draw sunlight/UV bar
-            if last_temp_coords and conditions["uv"]:
-                color = YELLOW
-                if conditions["uv"] >= 3:
-                    color = ORANGE
-                if conditions["uv"] >= 8:
-                    color = RED
-                # self.draw.rectangle(
-                #     (last_temp_coords[0], top + 110, x, top + 115),
-                #     fill=color,
-                # )
-            # Draw temperature bar
-            temp_y = top + (temp_max - conditions["temperature"]) * (
-                temp_height // temp_range
-            )
-            temp_color = RED if conditions["temperature"] > 0 else BLUE
-            if last_temp_coords:
-                self.draw.line(
-                    [last_temp_coords, (x, temp_y)],
-                    fill=temp_color,
-                    width=3,
-                )
-            last_temp_coords = (x, temp_y)
-            # Draw min/max label if appropriate
-            if conditions["temperature"] == temp_min and not drawn_min:
-                self.draw_text(
-                    pos=(x, temp_y - 30),
-                    text=round(temp_min),
-                    colour=temp_color,
-                    font=("regular", 20),
-                    align="centre",
-                )
-                drawn_min = True
-            if conditions["temperature"] == temp_max and not drawn_max:
-                self.draw_text(
-                    pos=(x, temp_y + 5),
-                    text=round(temp_max),
-                    colour=temp_color,
-                    font=("regular", 20),
-                    align="centre",
-                )
-                drawn_max = True
-            # Draw rain/snow bars
-            precip_top = top + 165
-            rain_height = min(precip_height, (conditions["rain"] / 8) * precip_height)
-            snow_height = min(precip_height, (conditions["snow"] / 8) * precip_height)
-            if rain_height:
-                self.draw.rectangle(
-                    (x - 3, precip_top, x + 3, precip_top + rain_height),
-                    fill=BLUE,
-                )
-            if snow_height:
-                self.draw.rectangle(
-                    (
-                        x - 3,
-                        precip_top + rain_height,
-                        x + 3,
-                        precip_top + rain_height + snow_height,
-                    ),
-                    fill=GREEN,
-                )
