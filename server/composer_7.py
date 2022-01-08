@@ -8,7 +8,7 @@ import pytz
 import cairo
 
 from weather import WeatherClient
-from holidays import holidays
+from holidays import holidays_by_country
 
 # BLACK = 0
 # WHITE = 1
@@ -32,11 +32,12 @@ icons = {}
 
 
 class ImageComposer7:
-    def __init__(self, api_key, lat, long, timezone):
+    def __init__(self, api_key, lat, long, timezone, country):
         self.api_key = api_key
         self.lat = lat
         self.long = long
         self.timezone = pytz.timezone(timezone)
+        self.country = country
 
     def render(self):
         # Fetch weather
@@ -314,6 +315,7 @@ class ImageComposer7:
         for alert in alerts:
             alert["color"] = RED
         # Add holidays
+        holidays = holidays_by_country(self.country)
         for holiday_date, holiday_name in holidays.items():
             days_until = (holiday_date - datetime.date.today()).days
             if 0 <= days_until <= 14:
