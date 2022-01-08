@@ -1,11 +1,13 @@
 import datetime
 import math
 import os
+import re
 from io import BytesIO
 from typing import List, Tuple, Union
 
 import pytz
 import cairo
+import requests
 
 from weather import WeatherClient
 from holidays import holidays_by_country
@@ -41,6 +43,8 @@ class ImageComposer7:
         self.font = params["font"]
         self.moon_phase = params.get('moon_phase')
         self.skip_graph_night = params.get('skip_graph_night')
+        self.top_right = params.get("top_right")
+        self.wm = params.get('wm')
 
     def render(self):
         # Fetch weather
@@ -54,7 +58,10 @@ class ImageComposer7:
             context.fill()
             # Draw features
             self.draw_date(context)
-            self.draw_temps(context)
+            if self.top_right == "transport":
+                self.draw_transport(context)
+            else:
+                self.draw_temps(context)
             self.draw_column(context, self.weather.hourly_summary(0), 120, 30)
             self.draw_column(context, self.weather.hourly_summary(2 * 3600), 120, 155)
             self.draw_column(context, self.weather.hourly_summary(5 * 3600), 120, 280)
@@ -119,6 +126,56 @@ class ImageComposer7:
             color=BLACK,
             weight="bold",
         )
+
+    def draw_transport(self, context: cairo.Context):
+        self.draw_icon(context, "bus", (388, 7))
+        self.draw_icon(context, "train", (513, 7))
+        #self.draw_text(context, position=(415,85), text="minutes", color=BLACK, size=12, align="center")
+        #self.draw_text(context, position=(515,85), text="minutes", color=BLACK, size=12, align="center")
+
+        # Scheduled
+        bus = requests.get(f'https://bustimes.org/stops/{self.wm["stop_id"]}/times.json').json()
+        nxt = bus['times'][:3]
+        nxt = [{"ExpectedArrival":"", "ScheduledArrival": f["aimed_departure_time"]} for f in nxt]
+
+        # Live
+        bus = requests.get(f'http://api.tfwm.org.uk/StopPoint/{self.wm["stop_id"]}/Arrivals?app_id={self.wm["app_id"]}&app_key={self.wm["app_key"]}&formatter=JSON').json()
+        bus = [f for f in bus['Predictions']['Prediction'] if f['ExpectedArrival']]
+
+        # No way of joining these two together apart from assuming same minute... :-/
+        scheduled_live = [re.sub('..Z', '00Z', row['ScheduledArrival']) for row in bus]
+        nxt = [n for n in nxt if n['ScheduledArrival'] not in scheduled_live]
+
+        nxt += bus
+        nxt = sorted(nxt, key=lambda x: x['ExpectedArrival'] or x['ScheduledArrival'])[:3]
+
+        places = [
+            {"position":(400,70), "size":36, "weight":"bold"},
+            {"position":(375,94), "size":16},
+            {"position":(425,94), "size":16},
+        ]
+        for i, row in enumerate(nxt):
+            if row['ExpectedArrival']:
+                exp = datetime.datetime.strptime(row['ExpectedArrival'], '%Y-%m-%dT%H:%M:%SZ')
+                bus_col = BLACK
+            else:
+                exp = datetime.datetime.strptime(row['ScheduledArrival'], '%Y-%m-%dT%H:%M:%SZ')
+                bus_col = GREY
+            exp = f"{exp.strftime('%H:%M')}"
+            self.draw_text(context, text=exp, color=bus_col, align="center", **places[i])
+
+        train = requests.get('https://traintimes.org.uk/live/brv/bhm').text
+        m = re.findall("<tr[^>]*><td[^>]*>(\d\d:\d\d)<br>(?:<span class='faded'|<span class='important'>(\d\d:\d\d))", train)[:3]
+        places = [
+            {"position":(525,70), "size":36, "weight": "bold"},
+            {"position":(500,94), "size":16},
+            {"position":(550,94), "size":16},
+        ]
+        for i, row in enumerate(m):
+            exp = row[1] or row[0]
+            color=RED if row[1] else BLACK
+            self.draw_text(context, text=exp, color=color, align="center", **places[i])
+
 
     def draw_temps(self, context: cairo.Context):
         # Draw on temperature ranges
