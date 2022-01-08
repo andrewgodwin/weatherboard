@@ -22,6 +22,7 @@ def index():
             long=request.args.get("longitude", "-104.90"),
             timezone=request.args.get("timezone", "America/Denver"),
             country=request.args.get("country", "us"),
+            font=requests.args.get("font", "Roboto"),
         )
         output = composer.render()
     else:

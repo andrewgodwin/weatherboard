@@ -32,12 +32,13 @@ icons = {}
 
 
 class ImageComposer7:
-    def __init__(self, api_key, lat, long, timezone, country):
+    def __init__(self, api_key, lat, long, timezone, country, font):
         self.api_key = api_key
         self.lat = lat
         self.long = long
         self.timezone = pytz.timezone(timezone)
         self.country = country
+        self.font = font
 
     def render(self):
         # Fetch weather
@@ -421,13 +422,13 @@ class ImageComposer7:
     ) -> int:
         text = str(text)
         if weight == "light":
-            context.select_font_face("Roboto Light")
+            context.select_font_face(f"{self.font} Light")
         elif weight == "bold":
             context.select_font_face(
-                "Roboto", cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD
+                self.font, cairo.FontSlant.NORMAL, cairo.FontWeight.BOLD
             )
         else:
-            context.select_font_face("Roboto")
+            context.select_font_face(self.font)
         context.set_source_rgb(*color)
         context.set_font_size(size)
         xbear, ybear, width, height = context.text_extents(text)[:4]
