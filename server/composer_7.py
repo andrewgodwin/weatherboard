@@ -40,6 +40,7 @@ class ImageComposer7:
         self.country = params["country"]
         self.font = params["font"]
         self.moon_phase = params.get('moon_phase')
+        self.skip_graph_night = params.get('skip_graph_night')
 
     def render(self):
         # Fetch weather
@@ -189,18 +190,32 @@ class ImageComposer7:
         height = 85
         left_axis = 18
         hours = 24
+        hours_range = []
+        offset = 0
+        for hour in range(hours + 1):
+            conditions = self.weather.hourly_summary(offset * 3600)
+            if self.skip_graph_night and conditions["hour"] == "23":
+                offset += 8
+            hours_range.append(offset)
+            offset += 1
+
         y_interval = 10
         graph_width = width - left_axis
         # Establish function that converts hour offset into X
         hour_to_x = lambda hour: left + left_axis + (hour * (graph_width / hours))
         # Draw day boundary lines
         today = self.weather.hourly_summary(0)["day"]
-        for hour in range(hours):
+        for pos in range(hours):
+            hour = hours_range[pos]
             day = self.weather.hourly_summary(hour * 3600)["day"]
             if day != today:
                 context.save()
-                context.move_to(hour_to_x(hour) - 0.5, top)
-                context.line_to(hour_to_x(hour) - 0.5, top + height)
+                if self.skip_graph_night:
+                    context.move_to(hour_to_x(pos) / 2 + hour_to_x(pos-1) / 2, top)
+                    context.line_to(hour_to_x(pos) / 2 + hour_to_x(pos-1) / 2, top + height)
+                else:
+                    context.move_to(hour_to_x(pos) - 0.5, top)
+                    context.line_to(hour_to_x(pos) - 0.5, top + height)
                 context.set_line_width(1)
                 context.set_source_rgb(*BLACK)
                 context.set_dash([1, 1])
@@ -209,8 +224,8 @@ class ImageComposer7:
                 today = day
         # Establish temperature-to-y function
         temps = [
-            self.weather.hourly_summary(hour * 3600)["temperature"]
-            for hour in range(hours + 1)
+            self.weather.hourly_summary(hours_range[pos] * 3600)["temperature"]
+            for pos in range(hours + 1)
         ]
         temp_min = min(temps)
         temp_max = max(temps)
@@ -223,10 +238,11 @@ class ImageComposer7:
         precip_to_y = lambda rain: top + 1 + (max(4 - rain, 0) * (height / 4))
         rain_points = []
         snow_points = []
-        for hour in range(hours + 1):
+        for pos in range(hours + 1):
+            hour = hours_range[pos]
             conditions = self.weather.hourly_summary(hour * 3600)
-            rain_points.append((hour_to_x(hour), precip_to_y(conditions["rain"])))
-            snow_points.append((hour_to_x(hour), precip_to_y(conditions["snow"])))
+            rain_points.append((hour_to_x(pos), precip_to_y(conditions["rain"])))
+            snow_points.append((hour_to_x(pos), precip_to_y(conditions["snow"])))
         self.draw_precip_curve(
             context, points=rain_points, bottom=int(precip_to_y(0)), color=BLUE
         )
@@ -254,12 +270,13 @@ class ImageComposer7:
                 valign="middle",
             )
         # Draw temperature curve
-        for hour in range(hours + 1):
+        for pos in range(hours + 1):
+            hour = hours_range[pos]
             conditions = self.weather.hourly_summary(hour * 3600)
-            if hour == 0:
-                context.move_to(hour_to_x(hour), temp_to_y(conditions["temperature"]))
+            if hour == 0 or (self.skip_graph_night and conditions["hour"] == "7"):
+                context.move_to(hour_to_x(pos), temp_to_y(conditions["temperature"]))
             else:
-                context.line_to(hour_to_x(hour), temp_to_y(conditions["temperature"]))
+                context.line_to(hour_to_x(pos), temp_to_y(conditions["temperature"]))
         context.set_source_rgb(*WHITE)
         context.set_line_width(6)
         context.stroke_preserve()
@@ -271,11 +288,12 @@ class ImageComposer7:
         context.stroke()
         # Draw hours and daylight/UV bar
         bar_top = top + height + 13
-        for hour in range(hours + 1):
+        for pos in range(hours + 1):
+            hour = hours_range[pos]
             conditions = self.weather.hourly_summary(hour * 3600)
-            x = hour_to_x(hour)
+            x = hour_to_x(pos)
             # Hour label
-            if hour % 3 == 0 and hour < hours:
+            if pos % 3 == 0 and pos < hours:
                 self.draw_text(
                     context,
                     text=conditions["hour"],
@@ -285,7 +303,7 @@ class ImageComposer7:
                     valign="bottom",
                 )
             # Conditions bar
-            if hour < hours:
+            if pos < hours:
                 color = BLACK
                 if conditions["uv"]:
                     color = ORANGE
