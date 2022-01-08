@@ -32,13 +32,13 @@ icons = {}
 
 
 class ImageComposer7:
-    def __init__(self, api_key, lat, long, timezone, country, font):
-        self.api_key = api_key
-        self.lat = lat
-        self.long = long
-        self.timezone = pytz.timezone(timezone)
-        self.country = country
-        self.font = font
+    def __init__(self, **params):
+        self.api_key = params["api_key"]
+        self.lat = params["latitude"]
+        self.long = params["longitude"]
+        self.timezone = pytz.timezone(params["timezone"])
+        self.country = params["country"]
+        self.font = params["font"]
 
     def render(self):
         # Fetch weather

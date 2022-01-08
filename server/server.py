@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 
 from flask import Flask, send_file, request
@@ -10,27 +11,32 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
+    config = {
+        "latitutde": "39.75",
+        "longitude": "-104.90",
+        "timezone": "America/Denver",
+        "country": "us",
+        "font": "Roboto",
+    }
+    if os.environ.get("CONFIG"):
+        import json
+        config = json.load(open(os.environ.get("CONFIG")))
+    config.update(request.args)
+
     # Get API key
-    api_key = request.args.get("api_key")
+    api_key = config.get("api_key")
     if not api_key:
         return '{"error": "no_api_key"}'
     # Render
-    if request.args.get("style", "2") == "7":
-        composer = ImageComposer7(
-            api_key,
-            lat=request.args.get("latitude", "39.75"),
-            long=request.args.get("longitude", "-104.90"),
-            timezone=request.args.get("timezone", "America/Denver"),
-            country=request.args.get("country", "us"),
-            font=requests.args.get("font", "Roboto"),
-        )
+    if config.get("style", "2") == "7":
+        composer = ImageComposer7(**config)
         output = composer.render()
     else:
         composer = ImageComposer2(
             api_key,
-            lat=request.args.get("latitude", "39.75"),
-            long=request.args.get("longitude", "-104.90"),
-            timezone=request.args.get("timezone", "America/Denver"),
+            lat=config["latitude"],
+            long=config["longitude"],
+            timezone=config["timezone"],
         )
         image = composer.render()
         output = BytesIO()
