@@ -39,6 +39,7 @@ class ImageComposer7:
         self.timezone = pytz.timezone(params["timezone"])
         self.country = params["country"]
         self.font = params["font"]
+        self.moon_phase = params.get('moon_phase')
 
     def render(self):
         # Fetch weather
@@ -59,7 +60,11 @@ class ImageComposer7:
             self.draw_column(context, self.weather.daily_summary(1), 120, 440)
             self.draw_meteogram(context)
             self.draw_alerts(context)
-            self.draw_stats(context)
+            if self.moon_phase:
+                self.draw_suns(context)
+                self.draw_moonphase(context)
+            else:
+                self.draw_stats(context)
             # Save out as bytestream
             output = BytesIO()
             surface.write_to_png(output)
@@ -367,9 +372,41 @@ class ImageComposer7:
                 subtext_width = 0
             left += 30 + subtext_width
 
+    def draw_moonphase(self, context: cairo.Context):
+        import ephem, unicodedata
+        d = datetime.date.today()
+        phases = [
+            (ephem.next_new_moon(d).datetime().date(), 'new_moon'),
+            (ephem.next_first_quarter_moon(d).datetime().date(), 'first_quarter'),
+            (ephem.next_full_moon(d).datetime().date(), 'full_moon'),
+            (ephem.next_last_quarter_moon(d).datetime().date(), 'last_quarter'),
+        ]
+        phases.sort()
+        phase = phases[0]
+        if phase[0] == d:
+            phase = phase[1]
+        elif phase[1] == 'new_moon':
+            phase = 'waning_crescent'
+        elif phase[1] == 'first_quarter':
+            phase = 'waxing_crescent'
+        elif phase[1] == 'full_moon':
+            phase = 'waxing_gibbous'
+        elif phase[1] == 'last_quarter':
+            phase = 'waning_gibbous'
+        symbol = unicodedata.lookup(phase.replace('_', ' ') + ' moon symbol')
+
+        self.draw_text(context, position=(500, 430), text=symbol, color=BLACK, size=36, weight="emoji")
+
     def draw_stats(self, context: cairo.Context):
         # Draw sunrise, sunset, AQI icon and values
         self.draw_icon(context, "rise-set-aqi", (450, 300))
+        self.draw_suns(context, draw_icon=False)
+        self.draw_aqi(context)
+
+    def draw_suns(self, context: cairo.Context, draw_icon=True):
+        # Draw sunrise, sunset
+        if draw_icon:
+            self.draw_icon(context, "rise-set", (450, 300))
         self.draw_text(
             context,
             position=(505, 337),
@@ -384,6 +421,8 @@ class ImageComposer7:
             color=BLACK,
             size=32,
         )
+
+    def draw_aqi(self, context: cairo.Context):
         # Pick AQI text and color
         aqi = self.weather.aqi()
         if aqi < 50:
@@ -421,7 +460,9 @@ class ImageComposer7:
         noop=False,
     ) -> int:
         text = str(text)
-        if weight == "light":
+        if weight == "emoji":
+            context.select_font_face("Noto Color Emoji")
+        elif weight == "light":
             context.select_font_face(f"{self.font} Light")
         elif weight == "bold":
             context.select_font_face(
