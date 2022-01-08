@@ -17,9 +17,6 @@ class WeatherClient:
         self.data = requests.get(
             f"https://api.openweathermap.org/data/2.5/onecall?lat={self.latitude}&lon={self.longitude}&exclude=minutely&units=metric&appid={api_key}"
         ).json()
-        self.pollution_data = requests.get(
-            f"https://api.openweathermap.org/data/2.5/air_pollution?lat={self.latitude}&lon={self.longitude}&exclude=minutely&units=metric&appid={api_key}"
-        ).json()
         self.current_time = self.data["current"]["dt"]
 
     def aqi(self):
